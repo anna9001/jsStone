@@ -1,0 +1,379 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>자스스톤</title>
+<style>
+#my,#rival{
+	display:inline-block;
+	vertical-align:top;
+	margin-right:50px;
+}
+#rival-deck,#rival-hero,#rival-cards,#my-deck,#my-hero,#my-cards{
+	text-align:center;
+}
+#rival{
+	vertical-align:bottom;
+}
+
+#my-deck,#rival-deck{
+	display:inline-block;		
+	vertical-align:top;
+	width:200px;
+	background:silver;
+}
+.card{
+	width:50px;
+	height:75px;
+	display:inline-block;
+	position:relative;
+	border:1px solid black;
+	margin-bottom:10px;
+	background:white;
+}
+.card-att, .card-hp, .card-cost{
+	font-size:12px;
+	font-weight:bold;
+	text-align:center;
+	inline-height:15px;
+	width:15px;
+	height:15px;
+	border-radius:50%;
+	display:inline-block;
+	position:absolute;
+	bottom:0;
+	border:1px solid black;
+}
+.card-att{
+	left:0;
+	background-color:yellow;
+}
+.card-hp{
+	right:0;
+	background-color:red;
+	color:white;
+}
+.card-cost{
+	bottom:auto;
+	top:0;
+	right:0;
+	background-color:blue;
+	color:white;
+}
+.card-name{
+	text-align:center;
+	font-size:12px;
+}
+.card-hidden{
+	display:none;
+}
+#turn-btn{
+	float:right;
+	position:relative;
+	top:-23px;
+}
+.turn{
+	border:1px solid black;
+}
+.card-selected{
+	border:2px solid red;
+}
+.card-turnover{
+	background-color:grey;
+}
+</style>
+</head>
+<body>
+<div id='rival'>
+	<div>코스트 : <span id='rival-cost'>10</span>/<span>10</span></div>
+	<div id='rival-hero'>
+	</div>
+	
+	<div id='rival-cards' style="height:150px">
+		
+	</div>
+</div>
+<div id='rival-deck'>
+	<div>덱</div>
+</div>
+	
+<hr/>
+<button id='turn-btn'>턴넘기기</button>
+<div id='my' class='turn'>
+	<div id='my-cards' style="height:150px">		
+	</div>
+	
+	<div id='my-hero'></div>
+	
+	<div>코스트 : <span id='my-cost'>10</span>/<span>10</span></div>
+</div>
+<div id='my-deck'>
+	<div>덱</div>
+</div>
+<div class='card-hidden'>
+	<div class='card'>
+		<div class='card-cost'></div>
+		<div class='card-att'></div>
+		<div class='card-hp'></div>
+	</div>
+</div>
+<br><br>
+<p>
+	<span style="font-weight:bold">게임 방법</span><br><br>
+	<span style="background-color:blue;color:white">파란공: </span> 코스트, 
+	<span style="background-color:yellow">노란공: </span> 공격,
+	<span style="background-color:red;color:white">빨간공: </span> 체력<br>
+	<br>
+	<span>코스트 수(10)안에서 쫄병카드 선택
+			ex)파란공 4+4+2 </span>
+</p>
+
+<script type="text/javascript">
+
+var rival={
+	hero:document.getElementById('rival-hero'),
+	deck:document.getElementById('rival-deck'),
+	field:document.getElementById('rival-cards'),
+	cost:document.getElementById('rival-cost'),
+	deckDB:[],
+	heroDB:[],
+	fieldDB:[],	
+	selected:null,
+	selectedDB:null,
+};
+	
+var my={
+	hero:document.getElementById('my-hero'),
+	deck:document.getElementById('my-deck'),
+	field:document.getElementById('my-cards'),
+	cost:document.getElementById('my-cost'),
+	deckDB:[],
+	heroDB:[],
+	fieldDB:[],	
+	selected:null,
+	selectedDB:null,
+}
+
+var turnBtn=document.getElementById('turn-btn');
+var turn=true; //true 내턴 false 상대방 턴
+
+function deckToField(data,mturn){
+	var obj=mturn? my:rival;
+	var currentCost= Number(obj.cost.textContent);	
+	if(currentCost<data.cost){ //여기 걸리면 함수 종료  0/10  cur.cost현재<data.cost
+		return true;
+	}	
+	var idx=obj.deckDB.indexOf(data);// 클릭한 카드의 데이터를 deckdb에서 찾아
+	obj.deckDB.splice(idx,1); //deckdb 에서 카드 한장 빼고 
+	obj.fieldDB.push(data); //필드에 넣고
+	obj.deck.innerHTML='';
+	obj.field.innerHTML='';
+	obj.fieldDB.forEach(function(data){
+		cardDom(data,obj.field);
+	});
+	obj.deckDB.forEach(function(data){
+		cardDom(data,obj.deck);
+	});
+	data.field=true;
+	obj.cost.textContent = currentCost-data.cost;
+}
+function redraw(me){
+	var obj=me? my:rival;
+	obj.deck.innerHTML='';
+	obj.field.innerHTML='';
+	obj.hero.innerHTML='';
+	obj.fieldDB.forEach(function(data){
+		cardDom(data,obj.field);
+	});
+	obj.deckDB.forEach(function(data){
+		cardDom(data,obj.deck);
+	});
+	cardDom(obj.heroDB,obj.hero,true);
+}
+function cardDom(data,dom,hero){	
+	var card=document.querySelector('.card-hidden .card').cloneNode(true);
+	card.querySelector('.card-cost').textContent=data.cost;
+	card.querySelector('.card-att').textContent=data.att;
+	card.querySelector('.card-hp').textContent=data.hp;
+	
+	if(hero){
+		card.querySelector('.card-cost').style.display='none';
+		var name=document.createElement('div');
+		name.textContent='영웅';
+		card.appendChild(name);
+	}
+	
+	card.addEventListener('click',function(){
+		
+		if(turn){ //내 턴
+			 if(card.classList.contains('card-turnover')){
+				 return;
+			} 
+			//상대카드 & 내 카드 선택 _//내 카드 선택 후 상대 카드 선택 가능 (공격)
+			if(!data.mine && my.selected){  //!data.mine=true 내 카드가 아니면 			
+				data.hp = data.hp-my.selectedDB.att; //상대선택 카드 hp 깍기
+				
+				if(data.hp<=0){ //카드가 죽었을 때
+					var idx=rival.fieldDB.indexOf(data);
+					
+					if(idx>-1){ //쫄병
+						rival.fieldDB.splice(idx,1);
+					}else{ //영웅
+						alert("승리!!");
+						setting();
+					}
+				}
+				
+				redraw(false); //상대 화면 다시 그려
+				my.selected.classList.remove('card-selected');
+				my.selected.classList.add('card-turnover');
+				my.selected=null;
+				my.selectedDB=null;
+				return;
+			}else if(!data.mine){ //그냥 상대 카드를 누르면 종료
+				return;
+			}
+			
+			if(data.field){ //선택 카드가 필드에 있으면 공격
+				card.parentNode.querySelectorAll('.card').forEach(function(card){
+					card.classList.remove('card-selected');
+				});
+				card.classList.add('card-selected');
+				my.selected=card;
+				my.selectedDB=data;
+
+			}else{ //카드가 필드에 없으면 
+				if(!deckToField(data,true)){
+					myDeckProduce(1);
+				};
+			}			
+		}else{  //상대 턴 data.mine = false 일때 
+			if(card.classList.contains('card-turnover')){
+				console.log('turnover');
+				 return;
+			} 
+			//(공격)
+			if(data.mine && rival.selected){ //false = rival
+				data.hp = data.hp-rival.selectedDB.att; //상대선택 카드 hp 깍기
+
+				if(data.hp<=0){ //카드가 죽었을 때
+					var idx=my.fieldDB.indexOf(data);
+					
+					if(idx>-1){ //쫄병
+						my.fieldDB.splice(idx,1);
+					}else{ //영웅
+						alert("패배!!");
+						setting();
+					}
+				}
+				
+				redraw(true); //상대 화면 다시 그려
+				rival.selected.classList.remove('card-selected');
+				rival.selected.classList.add('card-turnover');
+				rival.selected=null;
+				rival.selectedDB=null;
+				return;
+			}else if(data.mine){ //그냥 상대 카드를 누르면 종료
+				return;
+			}
+			
+			if(data.field){ //선택 카드가 필드에 있으면 공격
+				card.parentNode.querySelectorAll('.card').forEach(function(card){
+					card.classList.remove('card-selected');
+				});
+				card.classList.add('card-selected');
+				rival.selected=card;
+				rival.selectedDB=data;
+
+			}else{ //카드가 필드에 없으면 
+				if(!deckToField(data,false)){
+					rivalDeckProduce(1);
+				 };
+			}						 
+		}
+	});
+	dom.appendChild(card);
+}//cardDom
+
+function rivalDeckProduce(num){
+	for(var i=0;i<num;i++){
+		rival.deckDB.push(cardFactory(false,false));
+	}
+	rival.deck.innerHTML='';
+	rival.deckDB.forEach(function(data){
+		cardDom(data,rival.deck);
+	});
+}
+function myDeckProduce(num){
+	for(var i=0;i<num;i++){
+		my.deckDB.push(cardFactory(false,true)); //영웅 false 내카드 true
+	}
+	my.deck.innerHTML='';
+	my.deckDB.forEach(function(data){
+		cardDom(data,my.deck);		
+	});
+}
+function myHeroProduce(){
+	my.heroDB=cardFactory(true,true);
+	cardDom(my.heroDB,my.hero,true);
+	
+}
+function rivalHeroProduce(){
+	rival.heroDB=cardFactory(true,false);
+	cardDom(rival.heroDB,rival.hero,true);
+}
+
+function Card(hero,mine){
+	if(hero){
+		this.att=Math.ceil(Math.random()*2);
+		this.hp=Math.ceil(Math.random()*5)+25;
+		this.hero=true;
+		this.field=true;
+	}else{
+		this.att=Math.ceil(Math.random()*5);
+		this.hp=Math.ceil(Math.random()*5);
+		this.cost=Math.floor((this.att+this.hp)/2);
+	}
+	if(mine){
+		this.mine=true;
+	}
+}
+//카드공장안에 card 생성자를 넣으면 함수 호출시마다 선언되기때문에 밖에..
+function cardFactory(hero,mine){	
+	return new Card(hero,mine);	
+}
+
+function setting(){
+	rivalDeckProduce(5);
+	myDeckProduce(5);
+	myHeroProduce();
+	rivalHeroProduce();	
+}
+
+turnBtn.addEventListener('click',function(){
+	var obj=turn? my:rival; // 차례인 객체의 필드, 영웅 다시 로드하고 턴 바꿈
+	document.getElementById('rival').classList.toggle('turn');
+	document.getElementById('my').classList.toggle('turn');
+	obj.field.innerHTML='';
+	obj.hero.innerHTML='';
+	obj.fieldDB.forEach(function(data){
+		cardDom(data,obj.field);
+	});
+	cardDom(obj.heroDB,obj.hero,true);
+	
+	turn = !turn;
+	
+	if(turn){
+		my.cost.textContent=10;
+	}else{
+		rival.cost.textContent=10;
+	}
+});
+
+setting();
+
+</script>
+</body>
+</html>
